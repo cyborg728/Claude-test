@@ -349,7 +349,7 @@
   <!-- Header -->
   <div class="header">
     <h1>RU ↔ KO Переводчик</h1>
-    <button class="gear-btn" title="Настройки" onclick="toggleSettings()">⚙️</button>
+    <button type="button" class="gear-btn" title="Настройки" onclick="toggleSettings()">⚙️</button>
   </div>
 
   <!-- Settings panel -->
@@ -360,7 +360,7 @@
       <label class="field-label">API Ключ</label>
       <div class="api-key-wrap">
         <input type="password" id="s-apikey" placeholder="AIza..." autocomplete="off" />
-        <button class="eye-btn" onclick="toggleKeyVisibility()" title="Показать/скрыть">👁</button>
+        <button type="button" class="eye-btn" onclick="toggleKeyVisibility()" title="Показать/скрыть">👁</button>
       </div>
       <div class="field-hint">Google AI Studio → Get API key</div>
     </div>
@@ -387,7 +387,7 @@
       <textarea id="s-prompt-ko-ru">Переведи следующий текст с корейского языка на русский. Верни только перевод, без пояснений и комментариев.</textarea>
     </div>
 
-    <button class="save-btn" onclick="saveSettings()">Сохранить</button>
+    <button type="button" class="save-btn" onclick="saveSettings()">Сохранить</button>
     <div class="save-ok" id="save-ok">✓ Настройки сохранены</div>
   </div>
 
@@ -410,7 +410,7 @@
   </div>
 
   <!-- Button RU → KO -->
-  <button class="btn btn-ru-ko" id="btn-ru-ko" onclick="translate('ru', 'ko')">
+  <button type="button" class="btn btn-ru-ko" id="btn-ru-ko" onclick="translate('ru', 'ko')">
     Перевести на корейский
   </button>
 
@@ -430,7 +430,7 @@
   </div>
 
   <!-- Button KO → RU -->
-  <button class="btn btn-ko-ru" id="btn-ko-ru" onclick="translate('ko', 'ru')">
+  <button type="button" class="btn btn-ko-ru" id="btn-ko-ru" onclick="translate('ko', 'ru')">
     Перевести на русский
   </button>
 
@@ -443,7 +443,7 @@
         <span class="log-count" id="log-count">0</span>
       </div>
       <div class="log-header-right">
-        <button class="log-clear-btn" onclick="clearLog(event)">Очистить</button>
+        <button type="button" class="log-clear-btn" onclick="clearLog(event)">Очистить</button>
         <span class="log-toggle-arrow">▼</span>
       </div>
     </div>
@@ -667,6 +667,13 @@
 
         outputEl.textContent = result.trim();
         outputEl.classList.remove('empty');
+
+        // Also fill the opposite input field so the result is ready to use
+        if (from === 'ru') {
+          document.getElementById('ko-input').value = result.trim();
+        } else {
+          document.getElementById('ru-input').value = result.trim();
+        }
 
         addLogEntry({
           time: nowTime(), dir: from === 'ru' ? 'RU→KO' : 'KO→RU',
