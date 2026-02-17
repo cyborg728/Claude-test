@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Русско-корейский переводчик</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .block {
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .block-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 16px;
+      resize: vertical;
+      outline: none;
+      font-family: inherit;
+      color: #222;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: #4a90d9;
+    }
+
+    .output-box {
+      min-height: 80px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #f7f9fc;
+      border: 1px solid #e0e6f0;
+      font-size: 16px;
+      color: #222;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .output-box.empty {
+      color: #aaa;
+      font-style: italic;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      letter-spacing: 0.3px;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-ru-ko {
+      background: #4a90d9;
+      color: #fff;
+    }
+
+    .btn-ru-ko:hover {
+      background: #3a7bc8;
+    }
+
+    .btn-ko-ru {
+      background: #e84393;
+      color: #fff;
+    }
+
+    .btn-ko-ru:hover {
+      background: #d0337f;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-msg {
+      color: #e05;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .divider {
+      text-align: center;
+      color: #ccc;
+      font-size: 20px;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>RU ↔ KO Переводчик</h1>
+
+  <!-- Block 1: Russian input -->
+  <div class="block">
+    <div class="block-label">Русский текст</div>
+    <textarea id="ru-input" placeholder="Введите текст на русском..."></textarea>
+  </div>
+
+  <!-- Block 2: Korean output -->
+  <div class="block">
+    <div class="block-label">Перевод на корейский</div>
+    <div id="ko-output" class="output-box empty">Здесь появится перевод...</div>
+    <div id="ru-ko-error" class="error-msg"></div>
+  </div>
+
+  <!-- Button: translate RU → KO -->
+  <button class="btn btn-ru-ko" id="btn-ru-ko" onclick="translate('ru', 'ko')">
+    Перевести на корейский
+  </button>
+
+  <div class="divider">— — —</div>
+
+  <!-- Block 3: Korean input -->
+  <div class="block">
+    <div class="block-label">한국어 텍스트 (Корейский текст)</div>
+    <textarea id="ko-input" placeholder="한국어 텍스트를 입력하세요..."></textarea>
+  </div>
+
+  <!-- Block 4: Russian output -->
+  <div class="block">
+    <div class="block-label">Перевод на русский</div>
+    <div id="ru-output" class="output-box empty">Здесь появится перевод...</div>
+    <div id="ko-ru-error" class="error-msg"></div>
+  </div>
+
+  <!-- Button: translate KO → RU -->
+  <button class="btn btn-ko-ru" id="btn-ko-ru" onclick="translate('ko', 'ru')">
+    Перевести на русский
+  </button>
+
+  <script>
+    async function translate(from, to) {
+      const inputEl  = from === 'ru' ? document.getElementById('ru-input')   : document.getElementById('ko-input');
+      const outputEl = from === 'ru' ? document.getElementById('ko-output')  : document.getElementById('ru-output');
+      const errorEl  = from === 'ru' ? document.getElementById('ru-ko-error'): document.getElementById('ko-ru-error');
+      const btnEl    = from === 'ru' ? document.getElementById('btn-ru-ko')  : document.getElementById('btn-ko-ru');
+      const btnLabel = from === 'ru' ? 'Перевести на корейский' : 'Перевести на русский';
+
+      const text = inputEl.value.trim();
+      errorEl.textContent = '';
+
+      if (!text) {
+        outputEl.textContent = 'Введите текст для перевода.';
+        outputEl.classList.add('empty');
+        return;
+      }
+
+      // Show loading state
+      btnEl.disabled = true;
+      btnEl.innerHTML = `<span class="spinner"></span>Перевожу...`;
+      outputEl.classList.add('empty');
+      outputEl.textContent = 'Перевожу...';
+
+      try {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+        const response = await fetch(url);
+
+        if (!response.ok) throw new Error('Ошибка сети');
+
+        const data = await response.json();
+
+        if (data.responseStatus === 200 && data.responseData?.translatedText) {
+          outputEl.textContent = data.responseData.translatedText;
+          outputEl.classList.remove('empty');
+        } else {
+          throw new Error(data.responseDetails || 'Не удалось получить перевод');
+        }
+      } catch (err) {
+        outputEl.textContent = '';
+        outputEl.classList.add('empty');
+        errorEl.textContent = 'Ошибка: ' + err.message;
+      } finally {
+        btnEl.disabled = false;
+        btnEl.textContent = btnLabel;
+      }
+    }
+
+    // Allow Ctrl+Enter / Cmd+Enter to trigger translation
+    document.getElementById('ru-input').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') translate('ru', 'ko');
+    });
+    document.getElementById('ko-input').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') translate('ko', 'ru');
+    });
+  </script>
+
+</body>
+</html>
