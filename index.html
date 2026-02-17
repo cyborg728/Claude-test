@@ -3,13 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Русско-корейский переводчик</title>
+  <title>RU ↔ KO Переводчик</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -21,20 +17,125 @@
       gap: 12px;
     }
 
-    h1 {
-      text-align: center;
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 {
       font-size: 18px;
       color: #333;
-      margin-bottom: 4px;
+    }
+    .gear-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 8px;
+      color: #888;
+      font-size: 22px;
+      line-height: 1;
+      transition: background 0.15s;
+    }
+    .gear-btn:hover { background: #e4e6ea; color: #444; }
+
+    /* ── Settings panel ── */
+    .settings-panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .settings-panel.open { display: flex; }
+
+    .settings-panel h2 {
+      font-size: 15px;
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
     }
 
+    .field-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .field-hint {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 3px;
+    }
+
+    .settings-panel input,
+    .settings-panel select,
+    .settings-panel textarea {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #222;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .settings-panel input:focus,
+    .settings-panel select:focus,
+    .settings-panel textarea:focus { border-color: #4a90d9; }
+
+    .settings-panel textarea { min-height: 72px; resize: vertical; }
+
+    .api-key-wrap {
+      position: relative;
+      display: flex;
+    }
+    .api-key-wrap input { padding-right: 44px; }
+    .eye-btn {
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 100%;
+      padding: 0 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #999;
+      font-size: 16px;
+    }
+    .eye-btn:hover { color: #555; }
+
+    .save-btn {
+      padding: 11px;
+      background: #4a90d9;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .save-btn:hover { background: #3a7bc8; }
+    .save-ok {
+      font-size: 13px;
+      color: #2a9a5a;
+      text-align: center;
+      display: none;
+    }
+
+    /* ── Main blocks ── */
     .block {
       background: #fff;
       border-radius: 12px;
       padding: 14px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
-
     .block-label {
       font-size: 12px;
       font-weight: 600;
@@ -44,7 +145,7 @@
       margin-bottom: 8px;
     }
 
-    textarea {
+    .main-textarea {
       width: 100%;
       min-height: 110px;
       border: 1px solid #ddd;
@@ -57,10 +158,7 @@
       color: #222;
       transition: border-color 0.2s;
     }
-
-    textarea:focus {
-      border-color: #4a90d9;
-    }
+    .main-textarea:focus { border-color: #4a90d9; }
 
     .output-box {
       min-height: 80px;
@@ -74,12 +172,11 @@
       white-space: pre-wrap;
       word-break: break-word;
     }
+    .output-box.empty { color: #aaa; font-style: italic; }
 
-    .output-box.empty {
-      color: #aaa;
-      font-style: italic;
-    }
+    .error-msg { color: #e00550; font-size: 13px; margin-top: 6px; }
 
+    /* ── Buttons ── */
     .btn {
       display: block;
       width: 100%;
@@ -90,40 +187,19 @@
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s, transform 0.1s;
-      letter-spacing: 0.3px;
     }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    .btn:active {
-      transform: scale(0.98);
-    }
+    .btn-ru-ko { background: #4a90d9; color: #fff; }
+    .btn-ru-ko:hover:not(:disabled) { background: #3a7bc8; }
 
-    .btn-ru-ko {
-      background: #4a90d9;
-      color: #fff;
-    }
-
-    .btn-ru-ko:hover {
-      background: #3a7bc8;
-    }
-
-    .btn-ko-ru {
-      background: #e84393;
-      color: #fff;
-    }
-
-    .btn-ko-ru:hover {
-      background: #d0337f;
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
+    .btn-ko-ru { background: #e84393; color: #fff; }
+    .btn-ko-ru:hover:not(:disabled) { background: #d0337f; }
 
     .spinner {
       display: inline-block;
-      width: 16px;
-      height: 16px;
+      width: 16px; height: 16px;
       border: 2px solid rgba(255,255,255,0.4);
       border-top-color: #fff;
       border-radius: 50%;
@@ -131,33 +207,79 @@
       vertical-align: middle;
       margin-right: 6px;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    .divider { text-align: center; color: #ccc; font-size: 20px; user-select: none; }
 
-    .error-msg {
-      color: #e05;
+    /* ── No-key warning ── */
+    .no-key-warn {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 10px;
+      padding: 12px 14px;
       font-size: 13px;
-      margin-top: 6px;
+      color: #7a5800;
+      display: none;
     }
-
-    .divider {
-      text-align: center;
-      color: #ccc;
-      font-size: 20px;
-      user-select: none;
-    }
+    .no-key-warn.visible { display: block; }
   </style>
 </head>
 <body>
 
-  <h1>RU ↔ KO Переводчик</h1>
+  <!-- Header -->
+  <div class="header">
+    <h1>RU ↔ KO Переводчик</h1>
+    <button class="gear-btn" title="Настройки" onclick="toggleSettings()">⚙️</button>
+  </div>
+
+  <!-- Settings panel -->
+  <div class="settings-panel" id="settings-panel">
+    <h2>Настройки Gemini API</h2>
+
+    <div>
+      <label class="field-label">API Ключ</label>
+      <div class="api-key-wrap">
+        <input type="password" id="s-apikey" placeholder="AIza..." autocomplete="off" />
+        <button class="eye-btn" onclick="toggleKeyVisibility()" title="Показать/скрыть">👁</button>
+      </div>
+      <div class="field-hint">Google AI Studio → Get API key</div>
+    </div>
+
+    <div>
+      <label class="field-label">Модель</label>
+      <select id="s-model">
+        <option value="gemini-2.0-flash">gemini-2.0-flash (рекомендуется)</option>
+        <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+        <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+        <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+        <option value="custom">Другая (ввести вручную)</option>
+      </select>
+      <input type="text" id="s-model-custom" placeholder="gemini-..." style="margin-top:6px; display:none;" />
+    </div>
+
+    <div>
+      <label class="field-label">Промпт: Русский → Корейский</label>
+      <textarea id="s-prompt-ru-ko">Переведи следующий текст с русского языка на корейский. Верни только перевод, без пояснений и комментариев.</textarea>
+    </div>
+
+    <div>
+      <label class="field-label">Промпт: Корейский → Русский</label>
+      <textarea id="s-prompt-ko-ru">Переведи следующий текст с корейского языка на русский. Верни только перевод, без пояснений и комментариев.</textarea>
+    </div>
+
+    <button class="save-btn" onclick="saveSettings()">Сохранить</button>
+    <div class="save-ok" id="save-ok">✓ Настройки сохранены</div>
+  </div>
+
+  <!-- Warning if no key -->
+  <div class="no-key-warn" id="no-key-warn">
+    ⚠️ API ключ не задан. Откройте настройки (⚙️) и введите ключ Gemini.
+  </div>
 
   <!-- Block 1: Russian input -->
   <div class="block">
     <div class="block-label">Русский текст</div>
-    <textarea id="ru-input" placeholder="Введите текст на русском..."></textarea>
+    <textarea class="main-textarea" id="ru-input" placeholder="Введите текст на русском..."></textarea>
   </div>
 
   <!-- Block 2: Korean output -->
@@ -167,7 +289,7 @@
     <div id="ru-ko-error" class="error-msg"></div>
   </div>
 
-  <!-- Button: translate RU → KO -->
+  <!-- Button RU → KO -->
   <button class="btn btn-ru-ko" id="btn-ru-ko" onclick="translate('ru', 'ko')">
     Перевести на корейский
   </button>
@@ -177,7 +299,7 @@
   <!-- Block 3: Korean input -->
   <div class="block">
     <div class="block-label">한국어 텍스트 (Корейский текст)</div>
-    <textarea id="ko-input" placeholder="한국어 텍스트를 입력하세요..."></textarea>
+    <textarea class="main-textarea" id="ko-input" placeholder="한국어 텍스트를 입력하세요..."></textarea>
   </div>
 
   <!-- Block 4: Russian output -->
@@ -187,48 +309,145 @@
     <div id="ko-ru-error" class="error-msg"></div>
   </div>
 
-  <!-- Button: translate KO → RU -->
+  <!-- Button KO → RU -->
   <button class="btn btn-ko-ru" id="btn-ko-ru" onclick="translate('ko', 'ru')">
     Перевести на русский
   </button>
 
   <script>
+    // ── Storage keys ──
+    const KEYS = {
+      apikey:      'gtr_apikey',
+      model:       'gtr_model',
+      modelCustom: 'gtr_model_custom',
+      promptRuKo:  'gtr_prompt_ru_ko',
+      promptKoRu:  'gtr_prompt_ko_ru',
+    };
+
+    const DEFAULT_PROMPTS = {
+      ruKo: 'Переведи следующий текст с русского языка на корейский. Верни только перевод, без пояснений и комментариев.',
+      koRu: 'Переведи следующий текст с корейского языка на русский. Верни только перевод, без пояснений и комментариев.',
+    };
+
+    // ── Load settings into form on page open ──
+    function loadSettings() {
+      const s = id => document.getElementById(id);
+      s('s-apikey').value       = localStorage.getItem(KEYS.apikey)      || '';
+      s('s-model').value        = localStorage.getItem(KEYS.model)        || 'gemini-2.0-flash';
+      s('s-model-custom').value = localStorage.getItem(KEYS.modelCustom)  || '';
+      s('s-prompt-ru-ko').value = localStorage.getItem(KEYS.promptRuKo)   || DEFAULT_PROMPTS.ruKo;
+      s('s-prompt-ko-ru').value = localStorage.getItem(KEYS.promptKoRu)   || DEFAULT_PROMPTS.koRu;
+      updateCustomModelField();
+      checkKeyWarning();
+    }
+
+    function saveSettings() {
+      localStorage.setItem(KEYS.apikey,      document.getElementById('s-apikey').value.trim());
+      localStorage.setItem(KEYS.model,       document.getElementById('s-model').value);
+      localStorage.setItem(KEYS.modelCustom, document.getElementById('s-model-custom').value.trim());
+      localStorage.setItem(KEYS.promptRuKo,  document.getElementById('s-prompt-ru-ko').value.trim());
+      localStorage.setItem(KEYS.promptKoRu,  document.getElementById('s-prompt-ko-ru').value.trim());
+
+      const ok = document.getElementById('save-ok');
+      ok.style.display = 'block';
+      setTimeout(() => ok.style.display = 'none', 2500);
+      checkKeyWarning();
+    }
+
+    function getConfig() {
+      const modelSel    = localStorage.getItem(KEYS.model)       || 'gemini-2.0-flash';
+      const modelCustom = localStorage.getItem(KEYS.modelCustom) || '';
+      return {
+        apikey:     localStorage.getItem(KEYS.apikey)     || '',
+        model:      modelSel === 'custom' ? (modelCustom || 'gemini-2.0-flash') : modelSel,
+        promptRuKo: localStorage.getItem(KEYS.promptRuKo) || DEFAULT_PROMPTS.ruKo,
+        promptKoRu: localStorage.getItem(KEYS.promptKoRu) || DEFAULT_PROMPTS.koRu,
+      };
+    }
+
+    // ── UI helpers ──
+    function toggleSettings() {
+      const panel = document.getElementById('settings-panel');
+      panel.classList.toggle('open');
+    }
+
+    function toggleKeyVisibility() {
+      const inp = document.getElementById('s-apikey');
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    function updateCustomModelField() {
+      const sel    = document.getElementById('s-model');
+      const custom = document.getElementById('s-model-custom');
+      custom.style.display = sel.value === 'custom' ? 'block' : 'none';
+    }
+    document.getElementById('s-model').addEventListener('change', updateCustomModelField);
+
+    function checkKeyWarning() {
+      const warn = document.getElementById('no-key-warn');
+      const hasKey = (localStorage.getItem(KEYS.apikey) || '').trim().length > 0;
+      warn.classList.toggle('visible', !hasKey);
+    }
+
+    // ── Translation ──
     async function translate(from, to) {
-      const inputEl  = from === 'ru' ? document.getElementById('ru-input')   : document.getElementById('ko-input');
-      const outputEl = from === 'ru' ? document.getElementById('ko-output')  : document.getElementById('ru-output');
-      const errorEl  = from === 'ru' ? document.getElementById('ru-ko-error'): document.getElementById('ko-ru-error');
-      const btnEl    = from === 'ru' ? document.getElementById('btn-ru-ko')  : document.getElementById('btn-ko-ru');
+      const cfg = getConfig();
+
+      const inputEl  = document.getElementById(from === 'ru' ? 'ru-input'   : 'ko-input');
+      const outputEl = document.getElementById(from === 'ru' ? 'ko-output'  : 'ru-output');
+      const errorEl  = document.getElementById(from === 'ru' ? 'ru-ko-error': 'ko-ru-error');
+      const btnEl    = document.getElementById(from === 'ru' ? 'btn-ru-ko'  : 'btn-ko-ru');
       const btnLabel = from === 'ru' ? 'Перевести на корейский' : 'Перевести на русский';
 
-      const text = inputEl.value.trim();
       errorEl.textContent = '';
 
+      if (!cfg.apikey) {
+        document.getElementById('settings-panel').classList.add('open');
+        errorEl.textContent = 'Введите API ключ в настройках.';
+        return;
+      }
+
+      const text = inputEl.value.trim();
       if (!text) {
         outputEl.textContent = 'Введите текст для перевода.';
         outputEl.classList.add('empty');
         return;
       }
 
-      // Show loading state
+      // Loading state
       btnEl.disabled = true;
       btnEl.innerHTML = `<span class="spinner"></span>Перевожу...`;
-      outputEl.classList.add('empty');
       outputEl.textContent = 'Перевожу...';
+      outputEl.classList.add('empty');
+
+      const systemPrompt = from === 'ru' ? cfg.promptRuKo : cfg.promptKoRu;
+      const fullPrompt   = `${systemPrompt}\n\n${text}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${cfg.apikey}`;
 
       try {
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
-        const response = await fetch(url);
-
-        if (!response.ok) throw new Error('Ошибка сети');
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: fullPrompt }] }],
+            generationConfig: { temperature: 0.3 },
+          }),
+        });
 
         const data = await response.json();
 
-        if (data.responseStatus === 200 && data.responseData?.translatedText) {
-          outputEl.textContent = data.responseData.translatedText;
-          outputEl.classList.remove('empty');
-        } else {
-          throw new Error(data.responseDetails || 'Не удалось получить перевод');
+        if (!response.ok) {
+          const msg = data?.error?.message || `HTTP ${response.status}`;
+          throw new Error(msg);
         }
+
+        const result = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!result) throw new Error('Пустой ответ от API');
+
+        outputEl.textContent = result.trim();
+        outputEl.classList.remove('empty');
+
       } catch (err) {
         outputEl.textContent = '';
         outputEl.classList.add('empty');
@@ -239,13 +458,16 @@
       }
     }
 
-    // Allow Ctrl+Enter / Cmd+Enter to trigger translation
+    // Ctrl+Enter shortcuts
     document.getElementById('ru-input').addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') translate('ru', 'ko');
     });
     document.getElementById('ko-input').addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') translate('ko', 'ru');
     });
+
+    // Init
+    loadSettings();
   </script>
 
 </body>
