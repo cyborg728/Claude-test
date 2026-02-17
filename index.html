@@ -410,7 +410,7 @@
   </div>
 
   <!-- Button RU → KO -->
-  <button type="button" class="btn btn-ru-ko" id="btn-ru-ko" onclick="translate('ru', 'ko')">
+  <button type="button" class="btn btn-ru-ko" id="btn-ru-ko" onclick="runTranslate('ru', 'ko')">
     Перевести на корейский
   </button>
 
@@ -430,7 +430,7 @@
   </div>
 
   <!-- Button KO → RU -->
-  <button type="button" class="btn btn-ko-ru" id="btn-ko-ru" onclick="translate('ko', 'ru')">
+  <button type="button" class="btn btn-ko-ru" id="btn-ko-ru" onclick="runTranslate('ko', 'ru')">
     Перевести на русский
   </button>
 
@@ -607,7 +607,7 @@
     }
 
     // ── Translation ──
-    async function translate(from, to) {
+    async function runTranslate(from, to) {
       const cfg = getConfig();
 
       const inputEl  = document.getElementById(from === 'ru' ? 'ru-input'   : 'ko-input');
@@ -615,12 +615,15 @@
       const errorEl  = document.getElementById(from === 'ru' ? 'ru-ko-error': 'ko-ru-error');
       const btnEl    = document.getElementById(from === 'ru' ? 'btn-ru-ko'  : 'btn-ko-ru');
       const btnLabel = from === 'ru' ? 'Перевести на корейский' : 'Перевести на русский';
+      const dir      = from === 'ru' ? 'RU→KO' : 'KO→RU';
 
       errorEl.textContent = '';
 
       if (!cfg.apikey) {
         document.getElementById('settings-panel').classList.add('open');
         errorEl.textContent = 'Введите API ключ в настройках.';
+        addLogEntry({ time: nowTime(), dir, model: cfg.model || '—', httpStatus: '—',
+          ok: false, inputText: '', errorText: 'API ключ не задан', duration: 0 });
         return;
       }
 
@@ -628,6 +631,8 @@
       if (!text) {
         outputEl.textContent = 'Введите текст для перевода.';
         outputEl.classList.add('empty');
+        addLogEntry({ time: nowTime(), dir, model: cfg.model, httpStatus: '—',
+          ok: false, inputText: '', errorText: 'Пустой ввод', duration: 0 });
         return;
       }
 
@@ -701,10 +706,10 @@
 
     // Ctrl+Enter shortcuts
     document.getElementById('ru-input').addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') translate('ru', 'ko');
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runTranslate('ru', 'ko');
     });
     document.getElementById('ko-input').addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') translate('ko', 'ru');
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runTranslate('ko', 'ru');
     });
 
     // Init
