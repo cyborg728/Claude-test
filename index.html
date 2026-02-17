@@ -222,6 +222,126 @@
       display: none;
     }
     .no-key-warn.visible { display: block; }
+
+    /* ── Log panel ── */
+    .log-panel {
+      background: #1a1d23;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #13151a;
+      cursor: pointer;
+      user-select: none;
+    }
+    .log-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #9ca3af;
+    }
+    .log-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #374151;
+      transition: background 0.3s;
+    }
+    .log-dot.active { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+    .log-count {
+      background: #374151;
+      color: #9ca3af;
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 20px;
+    }
+    .log-header-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .log-clear-btn {
+      background: none;
+      border: 1px solid #374151;
+      color: #6b7280;
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .log-clear-btn:hover { border-color: #6b7280; color: #9ca3af; }
+    .log-toggle-arrow {
+      color: #4b5563;
+      font-size: 12px;
+      transition: transform 0.2s;
+    }
+    .log-panel.collapsed .log-toggle-arrow { transform: rotate(-90deg); }
+
+    .log-body {
+      max-height: 340px;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    .log-panel.collapsed .log-body { display: none; }
+
+    .log-empty {
+      text-align: center;
+      color: #4b5563;
+      font-size: 13px;
+      padding: 20px;
+      font-style: italic;
+    }
+
+    .log-entry {
+      padding: 8px 14px;
+      border-bottom: 1px solid #1f2430;
+      font-family: "SFMono-Regular", "Consolas", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .log-entry:last-child { border-bottom: none; }
+
+    .log-entry-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .log-time { color: #4b5563; }
+    .log-dir {
+      font-weight: 700;
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 4px;
+    }
+    .log-dir.ru-ko { background: #1e3a5f; color: #60a5fa; }
+    .log-dir.ko-ru { background: #4a1040; color: #f472b6; }
+    .log-model { color: #6b7280; font-size: 11px; }
+    .log-duration { color: #4b5563; font-size: 11px; margin-left: auto; }
+
+    .log-status-ok  { color: #22c55e; font-size: 11px; }
+    .log-status-err { color: #f87171; font-size: 11px; }
+
+    .log-row { display: flex; gap: 6px; }
+    .log-row-label {
+      color: #4b5563;
+      min-width: 28px;
+      flex-shrink: 0;
+    }
+    .log-row-text {
+      color: #9ca3af;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+    .log-row-text.err { color: #f87171; }
   </style>
 </head>
 <body>
@@ -314,6 +434,24 @@
     Перевести на русский
   </button>
 
+  <!-- Log panel -->
+  <div class="log-panel collapsed" id="log-panel">
+    <div class="log-header" onclick="toggleLog()">
+      <div class="log-header-left">
+        <div class="log-dot" id="log-dot"></div>
+        Логи запросов
+        <span class="log-count" id="log-count">0</span>
+      </div>
+      <div class="log-header-right">
+        <button class="log-clear-btn" onclick="clearLog(event)">Очистить</button>
+        <span class="log-toggle-arrow">▼</span>
+      </div>
+    </div>
+    <div class="log-body" id="log-body">
+      <div class="log-empty" id="log-empty">Запросов пока не было</div>
+    </div>
+  </div>
+
   <script>
     // ── Storage keys ──
     const KEYS = {
@@ -389,6 +527,85 @@
       warn.classList.toggle('visible', !hasKey);
     }
 
+    // ── Log panel ──
+    let logEntries = [];
+
+    function toggleLog() {
+      document.getElementById('log-panel').classList.toggle('collapsed');
+    }
+
+    function clearLog(e) {
+      e.stopPropagation();
+      logEntries = [];
+      renderLog();
+    }
+
+    function addLogEntry(entry) {
+      logEntries.unshift(entry); // newest first
+      renderLog();
+      // Flash the dot
+      const dot = document.getElementById('log-dot');
+      dot.classList.add('active');
+      setTimeout(() => dot.classList.remove('active'), 1200);
+    }
+
+    function trunc(str, n) {
+      return str.length > n ? str.slice(0, n) + '…' : str;
+    }
+
+    function renderLog() {
+      const body      = document.getElementById('log-body');
+      const empty     = document.getElementById('log-empty');
+      const countEl   = document.getElementById('log-count');
+      countEl.textContent = logEntries.length;
+
+      if (!logEntries.length) {
+        empty.style.display = 'block';
+        // remove old entries
+        [...body.querySelectorAll('.log-entry')].forEach(el => el.remove());
+        return;
+      }
+      empty.style.display = 'none';
+
+      // Rebuild entries
+      [...body.querySelectorAll('.log-entry')].forEach(el => el.remove());
+      logEntries.forEach(e => {
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+
+        const dirClass = e.dir === 'RU→KO' ? 'ru-ko' : 'ko-ru';
+        const statusHtml = e.ok
+          ? `<span class="log-status-ok">✓ ${e.httpStatus}</span>`
+          : `<span class="log-status-err">✗ ${e.httpStatus || 'ERR'}</span>`;
+
+        div.innerHTML = `
+          <div class="log-entry-head">
+            <span class="log-time">${e.time}</span>
+            <span class="log-dir ${dirClass}">${e.dir}</span>
+            <span class="log-model">${e.model}</span>
+            ${statusHtml}
+            <span class="log-duration">${e.duration}ms</span>
+          </div>
+          <div class="log-row">
+            <span class="log-row-label">REQ</span>
+            <span class="log-row-text">${escHtml(trunc(e.inputText, 120))}</span>
+          </div>
+          <div class="log-row">
+            <span class="log-row-label">${e.ok ? 'RES' : 'ERR'}</span>
+            <span class="log-row-text ${e.ok ? '' : 'err'}">${escHtml(trunc(e.ok ? e.outputText : e.errorText, 200))}</span>
+          </div>`;
+        body.appendChild(div);
+      });
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function nowTime() {
+      return new Date().toLocaleTimeString('ru-RU', { hour12: false });
+    }
+
     // ── Translation ──
     async function translate(from, to) {
       const cfg = getConfig();
@@ -422,8 +639,10 @@
 
       const systemPrompt = from === 'ru' ? cfg.promptRuKo : cfg.promptKoRu;
       const fullPrompt   = `${systemPrompt}\n\n${text}`;
-
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${cfg.apikey}`;
+
+      const startTime = Date.now();
+      let httpStatus  = '—';
 
       try {
         const response = await fetch(url, {
@@ -435,6 +654,7 @@
           }),
         });
 
+        httpStatus = response.status;
         const data = await response.json();
 
         if (!response.ok) {
@@ -448,10 +668,24 @@
         outputEl.textContent = result.trim();
         outputEl.classList.remove('empty');
 
+        addLogEntry({
+          time: nowTime(), dir: from === 'ru' ? 'RU→KO' : 'KO→RU',
+          model: cfg.model, httpStatus, ok: true,
+          inputText: text, outputText: result.trim(),
+          duration: Date.now() - startTime,
+        });
+
       } catch (err) {
         outputEl.textContent = '';
         outputEl.classList.add('empty');
         errorEl.textContent = 'Ошибка: ' + err.message;
+
+        addLogEntry({
+          time: nowTime(), dir: from === 'ru' ? 'RU→KO' : 'KO→RU',
+          model: cfg.model, httpStatus, ok: false,
+          inputText: text, errorText: err.message,
+          duration: Date.now() - startTime,
+        });
       } finally {
         btnEl.disabled = false;
         btnEl.textContent = btnLabel;
