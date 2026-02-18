@@ -707,9 +707,7 @@
         outputEl.classList.remove('empty');
 
         // Also fill the opposite input field so the result is ready to use
-        if (from === 'ru') {
-          document.getElementById('ko-input').value = result.trim();
-        } else {
+        if (from !== 'ru') {
           document.getElementById('ru-input').value = result.trim();
         }
 
