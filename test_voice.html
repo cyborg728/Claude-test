@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Запись звука</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f13;
+      font-family: system-ui, sans-serif;
+      color: #e8e8e8;
+    }
+
+    .card {
+      background: #1a1a22;
+      border: 1px solid #2e2e3e;
+      border-radius: 20px;
+      padding: 48px 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 36px;
+      width: 340px;
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #aaa;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* Кнопка записи */
+    .record-btn {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+      background: #3a3aff;
+      box-shadow: 0 0 0 0 rgba(58, 58, 255, 0.4);
+      position: relative;
+    }
+
+    .record-btn:hover {
+      transform: scale(1.06);
+    }
+
+    .record-btn:active {
+      transform: scale(0.97);
+    }
+
+    .record-btn.recording {
+      background: #e03030;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(224, 48, 48, 0.55); }
+      70%  { box-shadow: 0 0 0 22px rgba(224, 48, 48, 0); }
+      100% { box-shadow: 0 0 0 0   rgba(224, 48, 48, 0); }
+    }
+
+    /* Статус */
+    .status {
+      font-size: 0.9rem;
+      color: #666;
+      min-height: 1.2em;
+      transition: color 0.2s;
+    }
+
+    .status.active {
+      color: #e05555;
+    }
+
+    /* Таймер */
+    .timer {
+      font-size: 2rem;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.05em;
+      color: #555;
+      min-height: 1.4em;
+      transition: color 0.2s;
+    }
+
+    .timer.active {
+      color: #e8e8e8;
+    }
+
+    /* Плеер */
+    .player-wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .player-wrap.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .player-label {
+      font-size: 0.78rem;
+      color: #555;
+      text-align: center;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    audio {
+      width: 100%;
+      border-radius: 8px;
+      accent-color: #3a3aff;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Запись звука</h1>
+
+  <button class="record-btn" id="recordBtn" title="Начать запись">🎙️</button>
+
+  <div class="timer" id="timer">0:00</div>
+
+  <div class="status" id="status">Нажмите, чтобы начать</div>
+
+  <div class="player-wrap" id="playerWrap">
+    <div class="player-label">Последняя запись</div>
+    <audio id="player" controls></audio>
+  </div>
+</div>
+
+<script>
+  const btn      = document.getElementById('recordBtn');
+  const statusEl = document.getElementById('status');
+  const timerEl  = document.getElementById('timer');
+  const player   = document.getElementById('player');
+  const wrap     = document.getElementById('playerWrap');
+
+  let mediaRecorder = null;
+  let chunks        = [];
+  let timerInterval = null;
+  let seconds       = 0;
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = String(s % 60).padStart(2, '0');
+    return `${m}:${sec}`;
+  }
+
+  function startTimer() {
+    seconds = 0;
+    timerEl.textContent = formatTime(0);
+    timerEl.classList.add('active');
+    timerInterval = setInterval(() => {
+      seconds++;
+      timerEl.textContent = formatTime(seconds);
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    timerEl.classList.remove('active');
+  }
+
+  async function startRecording() {
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      statusEl.textContent = 'Нет доступа к микрофону';
+      return;
+    }
+
+    chunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = e => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      player.src = URL.createObjectURL(blob);
+      wrap.classList.add('visible');
+      stream.getTracks().forEach(t => t.stop());
+    };
+
+    mediaRecorder.start();
+
+    btn.classList.add('recording');
+    btn.textContent = '⏹️';
+    btn.title = 'Остановить запись';
+    statusEl.textContent = 'Идёт запись...';
+    statusEl.classList.add('active');
+    startTimer();
+  }
+
+  function stopRecording() {
+    mediaRecorder.stop();
+    btn.classList.remove('recording');
+    btn.textContent = '🎙️';
+    btn.title = 'Начать запись';
+    statusEl.textContent = 'Запись сохранена';
+    statusEl.classList.remove('active');
+    stopTimer();
+  }
+
+  btn.addEventListener('click', () => {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  });
+</script>
+
+</body>
+</html>
