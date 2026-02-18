@@ -190,14 +190,18 @@
     }
 
     chunks = [];
-    mediaRecorder = new MediaRecorder(stream);
+
+    const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4']
+      .find(t => MediaRecorder.isTypeSupported(t)) || '';
+
+    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
 
     mediaRecorder.ondataavailable = e => {
       if (e.data.size > 0) chunks.push(e.data);
     };
 
     mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
       player.src = URL.createObjectURL(blob);
       wrap.classList.add('visible');
       stream.getTracks().forEach(t => t.stop());
