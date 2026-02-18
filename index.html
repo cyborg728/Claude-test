@@ -143,7 +143,21 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
+    .clear-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #bbb;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 2px;
+      transition: color 0.15s;
+    }
+    .clear-btn:hover { color: #e04040; }
 
     .main-textarea {
       width: 100%;
@@ -370,6 +384,7 @@
       <select id="s-model">
         <option value="gemini-2.0-flash">gemini-2.0-flash (рекомендуется)</option>
         <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+        <option value="gemini-3-pro-preview">gemini-3-pro-preview</option>
         <option value="gemini-1.5-flash">gemini-1.5-flash</option>
         <option value="gemini-1.5-pro">gemini-1.5-pro</option>
         <option value="custom">Другая (ввести вручную)</option>
@@ -398,7 +413,7 @@
 
   <!-- Block 1: Russian input -->
   <div class="block">
-    <div class="block-label">Русский текст</div>
+    <div class="block-label"><span>Русский текст</span><button type="button" class="clear-btn" onclick="clearSection('ru')" title="Очистить">✕</button></div>
     <textarea class="main-textarea" id="ru-input" placeholder="Введите текст на русском..."></textarea>
   </div>
 
@@ -418,7 +433,7 @@
 
   <!-- Block 3: Korean input -->
   <div class="block">
-    <div class="block-label">한국어 텍스트 (Корейский текст)</div>
+    <div class="block-label"><span>한국어 텍스트 (Корейский текст)</span><button type="button" class="clear-btn" onclick="clearSection('ko')" title="Очистить">✕</button></div>
     <textarea class="main-textarea" id="ko-input" placeholder="한국어 텍스트를 입력하세요..."></textarea>
   </div>
 
@@ -604,6 +619,23 @@
 
     function nowTime() {
       return new Date().toLocaleTimeString('ru-RU', { hour12: false });
+    }
+
+    // ── Clear section ──
+    function clearSection(lang) {
+      if (lang === 'ru') {
+        document.getElementById('ru-input').value = '';
+        const ko = document.getElementById('ko-output');
+        ko.textContent = 'Здесь появится перевод...';
+        ko.classList.add('empty');
+        document.getElementById('ru-ko-error').textContent = '';
+      } else {
+        document.getElementById('ko-input').value = '';
+        const ru = document.getElementById('ru-output');
+        ru.textContent = 'Здесь появится перевод...';
+        ru.classList.add('empty');
+        document.getElementById('ko-ru-error').textContent = '';
+      }
     }
 
     // ── Translation ──
