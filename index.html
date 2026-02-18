@@ -385,6 +385,7 @@
         <option value="gemini-2.0-flash">gemini-2.0-flash (рекомендуется)</option>
         <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
         <option value="gemini-3-pro-preview">gemini-3-pro-preview</option>
+        <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
         <option value="gemini-1.5-flash">gemini-1.5-flash</option>
         <option value="gemini-1.5-pro">gemini-1.5-pro</option>
         <option value="custom">Другая (ввести вручную)</option>
@@ -446,7 +447,7 @@
 
   <!-- Button KO → RU -->
   <button type="button" class="btn btn-ko-ru" id="btn-ko-ru" onclick="runTranslate('ko', 'ru')">
-    Перевести на русский
+    러시아어로 번역
   </button>
 
   <!-- Log panel -->
@@ -646,7 +647,7 @@
       const outputEl = document.getElementById(from === 'ru' ? 'ko-output'  : 'ru-output');
       const errorEl  = document.getElementById(from === 'ru' ? 'ru-ko-error': 'ko-ru-error');
       const btnEl    = document.getElementById(from === 'ru' ? 'btn-ru-ko'  : 'btn-ko-ru');
-      const btnLabel = from === 'ru' ? 'Перевести на корейский' : 'Перевести на русский';
+      const btnLabel = from === 'ru' ? 'Перевести на корейский' : '러시아어로 번역';
       const dir      = from === 'ru' ? 'RU→KO' : 'KO→RU';
 
       errorEl.textContent = '';
