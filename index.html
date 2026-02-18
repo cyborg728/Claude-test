@@ -446,7 +446,7 @@
 
   <!-- Block 3: Korean input -->
   <div class="block">
-    <div class="block-label"><span>한국어 텍스트 (Корейский текст)</span><button type="button" class="clear-btn" onclick="clearSection('ko')" title="Очистить">✕</button></div>
+    <div class="block-label"><span>한국어 텍스트 (Корейский текст)</span><span style="display:flex;align-items:center;gap:2px;"><button type="button" class="paste-btn" onclick="pasteToKo()" title="Вставить из буфера обмена">📋</button><button type="button" class="clear-btn" onclick="clearSection('ko')" title="Очистить">✕</button></span></div>
     <textarea class="main-textarea" id="ko-input" placeholder="한국어 텍스트를 입력하세요..."></textarea>
   </div>
 
@@ -639,6 +639,17 @@
       try {
         const text = await navigator.clipboard.readText();
         const el = document.getElementById('ru-input');
+        el.value = text;
+        el.focus();
+      } catch (e) {
+        alert('Не удалось прочитать буфер обмена. Разрешите доступ в браузере.');
+      }
+    }
+
+    async function pasteToKo() {
+      try {
+        const text = await navigator.clipboard.readText();
+        const el = document.getElementById('ko-input');
         el.value = text;
         el.focus();
       } catch (e) {
