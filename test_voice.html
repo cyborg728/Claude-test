@@ -128,11 +128,119 @@
       border-radius: 8px;
       accent-color: #3a3aff;
     }
+
+    /* Настройки */
+    .settings-row {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .gear-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #555;
+      font-size: 20px;
+      padding: 4px;
+      border-radius: 8px;
+      transition: color 0.15s;
+    }
+    .gear-btn:hover { color: #aaa; }
+
+    .settings-panel {
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .settings-panel.open { display: flex; }
+
+    .settings-panel label {
+      font-size: 0.75rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .api-key-wrap {
+      display: flex;
+      position: relative;
+    }
+    .api-key-wrap input {
+      flex: 1;
+      padding: 8px 38px 8px 10px;
+      border: 1px solid #2e2e3e;
+      border-radius: 8px;
+      background: #13131a;
+      color: #e8e8e8;
+      font-size: 13px;
+      outline: none;
+    }
+    .api-key-wrap input:focus { border-color: #3a3aff; }
+    .eye-btn {
+      position: absolute;
+      right: 0; top: 0; height: 100%;
+      padding: 0 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #555;
+      font-size: 14px;
+    }
+    .eye-btn:hover { color: #aaa; }
+
+    /* Транскрипция */
+    .transcript-wrap {
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .transcript-wrap.visible { display: flex; }
+
+    .transcript-label {
+      font-size: 0.78rem;
+      color: #555;
+      text-align: center;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .transcript-status {
+      font-size: 0.8rem;
+      color: #888;
+      text-align: center;
+    }
+    .transcript-box {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px;
+      border: 1px solid #2e2e3e;
+      border-radius: 8px;
+      background: #13131a;
+      color: #e8e8e8;
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      line-height: 1.5;
+    }
+    .transcript-box:focus { border-color: #3a3aff; }
   </style>
 </head>
 <body>
 
 <div class="card">
+  <div class="settings-row">
+    <button type="button" class="gear-btn" id="gearBtn" title="Настройки">⚙️</button>
+  </div>
+
+  <div class="settings-panel" id="settingsPanel">
+    <label>OpenAI API Ключ</label>
+    <div class="api-key-wrap">
+      <input type="password" id="apiKeyInput" placeholder="sk-..." autocomplete="off" />
+      <button type="button" class="eye-btn" id="eyeBtn" title="Показать/скрыть">👁</button>
+    </div>
+  </div>
+
   <h1>Запись звука</h1>
 
   <button class="record-btn" id="recordBtn" title="Начать запись">🎙️</button>
@@ -145,19 +253,43 @@
     <div class="player-label">Последняя запись</div>
     <audio id="player" controls></audio>
   </div>
+
+  <div class="transcript-wrap" id="transcriptWrap">
+    <div class="transcript-label">Расшифровка</div>
+    <div class="transcript-status" id="transcriptStatus"></div>
+    <textarea class="transcript-box" id="transcriptBox" placeholder="Здесь появится текст..." readonly></textarea>
+  </div>
 </div>
 
 <script>
-  const btn      = document.getElementById('recordBtn');
-  const statusEl = document.getElementById('status');
-  const timerEl  = document.getElementById('timer');
-  const player   = document.getElementById('player');
-  const wrap     = document.getElementById('playerWrap');
+  const btn             = document.getElementById('recordBtn');
+  const statusEl        = document.getElementById('status');
+  const timerEl         = document.getElementById('timer');
+  const player          = document.getElementById('player');
+  const wrap            = document.getElementById('playerWrap');
+  const gearBtn         = document.getElementById('gearBtn');
+  const settingsPanel   = document.getElementById('settingsPanel');
+  const apiKeyInput     = document.getElementById('apiKeyInput');
+  const eyeBtn          = document.getElementById('eyeBtn');
+  const transcriptWrap  = document.getElementById('transcriptWrap');
+  const transcriptStatus= document.getElementById('transcriptStatus');
+  const transcriptBox   = document.getElementById('transcriptBox');
 
   let mediaRecorder = null;
   let chunks        = [];
   let timerInterval = null;
   let seconds       = 0;
+
+  // ── Settings ──
+  const API_KEY_STORAGE = 'voice_openai_key';
+  apiKeyInput.value = localStorage.getItem(API_KEY_STORAGE) || '';
+  apiKeyInput.addEventListener('input', () => {
+    localStorage.setItem(API_KEY_STORAGE, apiKeyInput.value.trim());
+  });
+  gearBtn.addEventListener('click', () => settingsPanel.classList.toggle('open'));
+  eyeBtn.addEventListener('click', () => {
+    apiKeyInput.type = apiKeyInput.type === 'password' ? 'text' : 'password';
+  });
 
   function formatTime(s) {
     const m = Math.floor(s / 60);
@@ -205,6 +337,7 @@
       player.src = URL.createObjectURL(blob);
       wrap.classList.add('visible');
       stream.getTracks().forEach(t => t.stop());
+      transcribeAudio(blob);
     };
 
     mediaRecorder.start();
@@ -234,6 +367,50 @@
       stopRecording();
     }
   });
+
+  // ── Transcription via OpenAI Whisper ──
+  async function transcribeAudio(blob) {
+    const apiKey = (localStorage.getItem(API_KEY_STORAGE) || '').trim();
+    if (!apiKey) {
+      transcriptWrap.classList.add('visible');
+      transcriptStatus.textContent = '';
+      transcriptBox.value = 'Введите OpenAI API ключ в настройках (⚙️)';
+      return;
+    }
+
+    transcriptWrap.classList.add('visible');
+    transcriptStatus.textContent = 'Расшифровка...';
+    transcriptBox.value = '';
+
+    // Determine file extension from MIME
+    const ext = blob.type.includes('ogg') ? 'ogg'
+              : blob.type.includes('mp4') ? 'mp4'
+              : 'webm';
+    const file = new File([blob], `recording.${ext}`, { type: blob.type });
+
+    const form = new FormData();
+    form.append('file', file);
+    form.append('model', 'whisper-1');
+
+    try {
+      const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+        body: form,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error?.message || `HTTP ${res.status}`);
+      }
+
+      transcriptBox.value = data.text || '';
+      transcriptStatus.textContent = '';
+    } catch (e) {
+      transcriptStatus.textContent = 'Ошибка: ' + e.message;
+    }
+  }
 </script>
 
 </body>
