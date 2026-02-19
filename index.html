@@ -237,6 +237,40 @@
 
     .divider { text-align: center; color: #ccc; font-size: 20px; user-select: none; }
 
+    /* ── Mic button ── */
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+    .btn-row .btn { flex: 1; width: auto; display: flex; align-items: center; justify-content: center; }
+
+    .mic-btn {
+      flex-shrink: 0;
+      width: 54px;
+      border: none;
+      border-radius: 12px;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e4e7ed;
+      color: #555;
+      transition: background 0.2s, color 0.2s;
+    }
+    .mic-btn:hover { background: #d4d8e0; }
+    .mic-btn.recording {
+      background: #e03030;
+      color: #fff;
+      animation: mic-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes mic-pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(224, 48, 48, 0.55); }
+      70%  { box-shadow: 0 0 0 10px rgba(224, 48, 48, 0); }
+      100% { box-shadow: 0 0 0 0   rgba(224, 48, 48, 0); }
+    }
+
     /* ── No-key warning ── */
     .no-key-warn {
       background: #fff8e1;
@@ -415,6 +449,15 @@
       <textarea id="s-prompt-ko-ru">Переведи следующий текст с корейского языка на русский. Верни только перевод, без пояснений и комментариев.</textarea>
     </div>
 
+    <div>
+      <label class="field-label">OpenAI API Ключ (для голосового ввода)</label>
+      <div class="api-key-wrap">
+        <input type="password" id="s-openai-key" placeholder="sk-..." autocomplete="off" />
+        <button type="button" class="eye-btn" onclick="toggleOpenAIKeyVisibility()" title="Показать/скрыть">👁</button>
+      </div>
+      <div class="field-hint">platform.openai.com → API keys</div>
+    </div>
+
     <button type="button" class="save-btn" onclick="saveSettings()">Сохранить</button>
     <div class="save-ok" id="save-ok">✓ Настройки сохранены</div>
   </div>
@@ -438,9 +481,12 @@
   </div>
 
   <!-- Button RU → KO -->
-  <button type="button" class="btn btn-ru-ko" id="btn-ru-ko" onclick="runTranslate('ru', 'ko')">
-    Перевести на корейский
-  </button>
+  <div class="btn-row">
+    <button type="button" class="btn btn-ru-ko" id="btn-ru-ko" onclick="runTranslate('ru', 'ko')">
+      Перевести на корейский
+    </button>
+    <button type="button" class="mic-btn" id="mic-ru" onclick="toggleVoice('ru')" title="Записать голос на русском">🎙️</button>
+  </div>
 
   <div class="divider">— — —</div>
 
@@ -458,9 +504,12 @@
   </div>
 
   <!-- Button KO → RU -->
-  <button type="button" class="btn btn-ko-ru" id="btn-ko-ru" onclick="runTranslate('ko', 'ru')">
-    러시아어로 번역
-  </button>
+  <div class="btn-row">
+    <button type="button" class="btn btn-ko-ru" id="btn-ko-ru" onclick="runTranslate('ko', 'ru')">
+      러시아어로 번역
+    </button>
+    <button type="button" class="mic-btn" id="mic-ko" onclick="toggleVoice('ko')" title="Записать голос на корейском">🎙️</button>
+  </div>
 
   <!-- Log panel -->
   <div class="log-panel collapsed" id="log-panel">
@@ -488,6 +537,7 @@
       modelCustom: 'gtr_model_custom',
       promptRuKo:  'gtr_prompt_ru_ko',
       promptKoRu:  'gtr_prompt_ko_ru',
+      openaiKey:   'gtr_openai_key',
     };
 
     const DEFAULT_PROMPTS = {
@@ -503,6 +553,7 @@
       s('s-model-custom').value = localStorage.getItem(KEYS.modelCustom)  || '';
       s('s-prompt-ru-ko').value = localStorage.getItem(KEYS.promptRuKo)   || DEFAULT_PROMPTS.ruKo;
       s('s-prompt-ko-ru').value = localStorage.getItem(KEYS.promptKoRu)   || DEFAULT_PROMPTS.koRu;
+      s('s-openai-key').value   = localStorage.getItem(KEYS.openaiKey)    || '';
       updateCustomModelField();
       checkKeyWarning();
     }
@@ -513,11 +564,17 @@
       localStorage.setItem(KEYS.modelCustom, document.getElementById('s-model-custom').value.trim());
       localStorage.setItem(KEYS.promptRuKo,  document.getElementById('s-prompt-ru-ko').value.trim());
       localStorage.setItem(KEYS.promptKoRu,  document.getElementById('s-prompt-ko-ru').value.trim());
+      localStorage.setItem(KEYS.openaiKey,   document.getElementById('s-openai-key').value.trim());
 
       const ok = document.getElementById('save-ok');
       ok.style.display = 'block';
       setTimeout(() => ok.style.display = 'none', 2500);
       checkKeyWarning();
+    }
+
+    function toggleOpenAIKeyVisibility() {
+      const inp = document.getElementById('s-openai-key');
+      inp.type = inp.type === 'password' ? 'text' : 'password';
     }
 
     function getConfig() {
@@ -767,6 +824,90 @@
       } finally {
         btnEl.disabled = false;
         btnEl.textContent = btnLabel;
+      }
+    }
+
+    // ── Voice recording + Whisper transcription ──
+    const voiceState = { ru: null, ko: null }; // holds MediaRecorder per lang
+
+    async function toggleVoice(lang) {
+      const micBtn = document.getElementById(`mic-${lang}`);
+
+      // If already recording this lang — stop
+      if (voiceState[lang] && voiceState[lang].state === 'recording') {
+        voiceState[lang].stop();
+        return;
+      }
+
+      // If other lang is recording — do nothing (avoid conflict)
+      const other = lang === 'ru' ? 'ko' : 'ru';
+      if (voiceState[other] && voiceState[other].state === 'recording') return;
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (e) {
+        alert('Нет доступа к микрофону');
+        return;
+      }
+
+      const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4']
+        .find(t => MediaRecorder.isTypeSupported(t)) || '';
+
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+      const chunks = [];
+      voiceState[lang] = recorder;
+
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        micBtn.classList.remove('recording');
+        micBtn.textContent = '🎙️';
+        const blob = new Blob(chunks, { type: recorder.mimeType });
+        transcribeVoice(blob, lang);
+      };
+
+      recorder.start();
+      micBtn.classList.add('recording');
+      micBtn.textContent = '⏹️';
+    }
+
+    async function transcribeVoice(blob, lang) {
+      const openaiKey = (localStorage.getItem(KEYS.openaiKey) || '').trim();
+      if (!openaiKey) {
+        document.getElementById('settings-panel').classList.add('open');
+        alert('Введите OpenAI API ключ в настройках (⚙️)');
+        return;
+      }
+
+      const targetInput = document.getElementById(lang === 'ru' ? 'ru-input' : 'ko-input');
+      const micBtn      = document.getElementById(`mic-${lang}`);
+      micBtn.textContent = '⏳';
+      micBtn.disabled    = true;
+
+      const ext  = blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mp4') ? 'mp4' : 'webm';
+      const file = new File([blob], `rec.${ext}`, { type: blob.type });
+      const form = new FormData();
+      form.append('file', file);
+      form.append('model', 'whisper-1');
+      form.append('language', lang === 'ru' ? 'ru' : 'ko');
+
+      try {
+        const res  = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${openaiKey}` },
+          body: form,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+        targetInput.value = data.text || '';
+        targetInput.focus();
+      } catch (e) {
+        alert('Ошибка транскрипции: ' + e.message);
+      } finally {
+        micBtn.textContent = '🎙️';
+        micBtn.disabled    = false;
       }
     }
 
